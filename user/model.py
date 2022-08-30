@@ -1,10 +1,14 @@
-from ..utils.db import db
- 
+from mongoengine import Document
+from mongoengine import StringField
 
-class User(db.Model):
-    id=db.Column(db.Integer(),primary_key=True)
-    email=db.Column(db.String(80),nullable=False,unique=True)
-    username = db.Column(db.String(25),nullable=False)
-    password_hash=db.Column(db.Text(),nullable=False)
+class User(Document):
+    name = StringField(max_length=60, required=True, unique=True)
+    email = StringField(max_length=60, required=True, unique=True)
+    password = StringField(max_length=60, required=True, unique=True)
+    username = StringField(max_length=60, required=True, unique=True)
 
-  
+    def __unicode__(self):
+        return self.name
+
+    def __repr__(self):
+        return self.name
