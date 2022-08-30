@@ -79,6 +79,7 @@ def login():
                 time = datetime.utcnow() + timedelta(hours=24)
                 token = jwt.encode({
                         "user": {
+                            "phone": f"{user['phone']}",
                             "email": f"{user['email']}",
                             "id": f"{user['_id']}",
                         },
