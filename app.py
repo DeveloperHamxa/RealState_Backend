@@ -34,26 +34,35 @@ def tokenReq(f):
 def func():
     return "Real Estate API", 200
 
+@app.route('/profile')
+def my_profile():
+    response_body = {
+        "name": "Nagato",
+        "about" :"Hello! I'm a full stack developer that loves python and javascript"
+    }
+
+    return response_body
 
 
-@app.route('/register', methods=['POST', "GET"])
-def register():
-    res_data = {}
+@app.route('/signup', methods=['POST'])
+def save_user():
     message = ""
     code = 500
     status = "fail"
     try:
-        data = request.get_json
+        data = request.get_json()
         email_found = db['users'].find_one({"email": data['email']})
         if email_found:
             message = 'This Email is already registered'
             status = "fail"
             return jsonify({'status': status, "message": message}), 200
         else:
-            data['password'] = bcrypt.generate_password_hash(
-                data['password']).decode('utf-8')
+            # hashing the password so it's not stored in the db as it was 
+            data['password'] = bcrypt.generate_password_hash(data['password']).decode('utf-8')
             data['created'] = datetime.now()
-            res = db["users"].insert_one(data)
+
+            #this is bad practice since the data is not being checked before insert
+            res = db["users"].insert_one(data) 
             if res.acknowledged:
                 status = "successful"
                 message = "user created successfully"
@@ -62,8 +71,7 @@ def register():
         message = f"{ex}"
         status = "fail"
         code = 500
-    return jsonify({"Email": data["email"], "First Name": data["fname"], "Last Name": data["lname"], "message": message}), 200
-
+    return jsonify({'status': status, "message": message}), 200
 
 @app.route('/login', methods=['POST', 'GET'])
 def login():
@@ -121,6 +129,7 @@ def add_property():
     Area=data['Area']
     Finish_Type=data['Finish Type']
     res = db["estate"].insert_one({"Property": Property_Name, "Property Type": Property_Type, "Location": Location, "Area": Area, "Finish Type": Finish_Type})
+    # res = db["estate"].insert_one(data)
     if res.acknowledged:
         status = "successful"
         message = "state created successfully"
@@ -146,6 +155,19 @@ def search_property(name):
         code = 201
         return jsonify({'status': status, "message": message}), code
 
+@app.route('/allproperty', methods=['GET'])
+def index():
+    cur = db['estate'].find({}, {'name': 1, 'location': 1 , '_id': 0})
+    page_sanitized = json.loads(json_util.dumps(cur))
+    return jsonify({'result': page_sanitized})
 
+# @app.route("/add", methods=["POST", "GET"], strict_slashes=False)
+# def add_articles():
+#     title = request.json['title']
+#     body = request.json['body']
+
+#     res= db["estate"].insert_one(title=title,body=body)
+
+    return jsonify(res)
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port='8000')
