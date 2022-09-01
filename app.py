@@ -34,10 +34,6 @@ def tokenReq(f):
     return decorated
 
 
-@app.route('/')
-def func():
-    return "Real Estate API", 200
-
 
 @app.route('/profile')
 def my_profile():
