@@ -1,22 +1,57 @@
-from flask import Flask, jsonify, request
+from flask import Flask,jsonify, request,make_response
+from flask_bcrypt import Bcrypt
+from datetime import datetime
+from realestate.config.db import db
 import jwt
 from datetime import datetime, timedelta
-from flask_bcrypt import Bcrypt
 from functools import wraps
+import bcrypt
 from flask_jwt_extended import (JWTManager,
-                                create_access_token, create_refresh_token,
-                                get_jwt_identity,
-                                jwt_required)
-from werkzeug.security import generate_password_hash,check_password_hash
-from db import db
-from bson import json_util
-import json
+create_access_token,create_refresh_token,
+get_jwt_identity,
+jwt_required)
+
+from realestate.controllers.addproperty import addproperty_blueprint
+from realestate.controllers.searchproperty import searchproperty_blueprint
+from realestate.controllers.allproperty import allproperty_blueprint
+
+
 
 app = Flask(__name__)
-# CORS(app, resources={r"/*": {"origins": "*"}})
 bcrypt = Bcrypt(app)
-secret = "***************"
+secret ="*********"
 
+
+app.register_blueprint(addproperty_blueprint, url_prefix="")
+app.register_blueprint(searchproperty_blueprint, url_prefix="")
+app.register_blueprint(allproperty_blueprint, url_prefix="")
+
+
+@app.route('/signup', methods=['POST', 'GET'])
+def save_user():
+    message = ""
+    code = 500
+    status = "fail"
+    try:
+        data = request.get_json()
+        email_found = db['users'].find_one({"email": data['email']})
+        if email_found:
+            message = 'This Email is already registered'
+            status = "fail"
+            return jsonify({'status': status, "message": message}), 200
+        else:
+            data['password'] = bcrypt.generate_password_hash(
+                data['password']).decode('utf-8')
+            data['created'] = datetime.now()
+            res = db["users"].insert_one(data)
+            if res.acknowledged:
+                message = "user created successfully"
+                status = "successful"
+    except Exception as ex:
+        message = f"{ex}"
+        status = "fail"
+        code = 500
+    return jsonify({'status': status, "message": message}), 200
 
 def tokenReq(f):
     @wraps(f)
@@ -32,49 +67,6 @@ def tokenReq(f):
             return jsonify({"status": "fail", "message": "unauthorized"}), 401
     return decorated
 
-
-
-@app.route('/profile')
-def my_profile():
-    response_body = {
-        "name": "Nagato",
-        "about": "Hello! I'm a full stack developer that loves python and javascript"
-    }
-
-    return response_body
-
-
-@app.route('/signup', methods=['POST'])
-def save_user():
-    message = ""
-    code = 500
-    status = "fail"
-    try:
-        data = request.get_json()
-        email_found = db['users'].find_one({"email": data['email']})
-        if email_found:
-            message = 'This Email is already registered'
-            status = "fail"
-            return jsonify({'status': status, "message": message}), 200
-        else:
-            # hashing the password so it's not stored in the db as it was
-            data['password'] = bcrypt.generate_password_hash(
-                data['password']).decode('utf-8')
-            data['created'] = datetime.now()
-
-            # this is bad practice since the data is not being checked before insert
-            res = db["users"].insert_one(data)
-            if res.acknowledged:
-                status = "successful"
-                message = "user created successfully"
-                code = 201
-    except Exception as ex:
-        message = f"{ex}"
-        status = "fail"
-        code = 500
-    return jsonify({'status': status, "message": message}), 200
-
-
 @app.route('/login', methods=['POST', 'GET'])
 def login():
     message = ""
@@ -83,10 +75,8 @@ def login():
     status = "fail"
     try:
         data = request.get_json()
-        user = db["users"].find_one({"email": f'{data["email"]}'})
-        print("data", data)
+        user = db["users"].find_one({"email": data["email"]})
         if user:
-            print(user)
             user['_id'] = str(user['_id'])
             if user and bcrypt.check_password_hash(user['password'], data['password']):
                 time = datetime.utcnow() + timedelta(hours=24)
@@ -121,63 +111,15 @@ def login():
         status = "fail"
     return jsonify({'status': status, "data": res_data, "message": message}), code
 
+@app.route('/refresh')
+@jwt_required(refresh=True)
+def post(self):
 
+        current_user=get_jwt_identity()
 
+        new_access_token=create_access_token(identity=current_user)
 
-@app.route('/addproperty', methods=['POST', "GET"])
-def add_property():
-    data = request.get_json()
-    # Property_Name = data['Property Name']
-    # Location = data['Location']
-    # Property_Type = data['Property Type']
-    # Area = data['Area']
-    # Finish_Type = data['Finish Type']
-    # res = db["estate"].insert_one({"Property": Property_Name, "Property Type": Property_Type,
-    #                               "Location": Location, "Area": Area, "Finish Type": Finish_Type})
-    res = db["estate"].insert_one(data)
-    if res.acknowledged:
-        status = "successful"
-        message = "state created successfully"
-        code = 201
-        return jsonify({'status': status, "message": message}), code
+        return make_response(jsonify({"access_token":new_access_token}),200)
 
-    else:
-        status = "successful"
-        message = "Estate is not Created"
-        code = 201
-    return jsonify({'status': status, "message": message}), code
-
-
-@app.route('/property', methods=['POST', "GET"])
-def search_property():
-    data = request.get_json()
-    estate_found = db['estate'].find_one(data)
-    if estate_found:
-        output = {'name': estate_found['name']}
-        page_sanitized = json.loads(json_util.dumps(output))
-        return jsonify({'result': page_sanitized})
-    else:
-        status = "unsuccessful"
-        message = "Not Found"
-        code = 201
-        return jsonify({'status': status, "message": message}), code
-
-
-@app.route('/allproperty', methods=['GET'])
-def index():
-    cur = db['estate'].find({}, {'name': 1, 'location': 1, '_id': 0})
-    page_sanitized = json.loads(json_util.dumps(cur))
-    return jsonify({'result': page_sanitized})
-
-# @app.route("/add", methods=["POST", "GET"], strict_slashes=False)
-# def add_articles():
-#     title = request.json['title']
-#     body = request.json['body']
-
-#     res= db["estate"].insert_one(title=title,body=body)
-
-    return jsonify(res)
-
-
-if __name__ == '__main__':
-    app.run()
+if __name__ == "__main__":
+    app.run(debug=True)
