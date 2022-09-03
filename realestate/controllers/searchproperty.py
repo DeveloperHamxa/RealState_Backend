@@ -10,11 +10,12 @@ searchproperty_blueprint = Blueprint("searchproperty", __name__)
 def search_property():
     data = request.get_json()
     estate_found = db['estate'].find_one(data)
+    print(estate_found)
     if estate_found:
         message = "property found"
         status = "successful"
         code = 201
-        output = {'name': estate_found['name']}
+        output = {'name': estate_found['name'],'image': estate_found['image']}
         page_sanitized = json.loads(json_util.dumps(output))
         return jsonify({'result': page_sanitized, 'status': status, "message": message}), code
     else:

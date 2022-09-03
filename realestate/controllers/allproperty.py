@@ -9,7 +9,7 @@ allproperty_blueprint = Blueprint("allproperty", __name__)
 
 @allproperty_blueprint.route('/allproperty', methods=['GET', 'POST'])
 def allproperty():
-    data = db['estate'].find({}, {'name': 1, 'location': 1,'ptype': 1,'ftype': 1,'area': 1,'price': 1, '_id': 0})
+    data = db['estate'].find({}, {'name': 1, 'location': 1,'ptype': 1,'ftype': 1,'area': 1,'price': 1,'image': 1, '_id': 0})
     if data:
         message = "all property data"
         status = "successful"
