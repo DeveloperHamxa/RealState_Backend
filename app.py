@@ -42,7 +42,10 @@ app.register_blueprint(addproperty_blueprint, url_prefix="")
 app.register_blueprint(searchproperty_blueprint, url_prefix="")
 app.register_blueprint(allproperty_blueprint, url_prefix="")
 
-
+@app.route("/")
+def home_view():
+        return "<h1>Hello World!</h1>"
+        
 @app.route('/signup', methods=['POST', 'GET'])
 def save_user():
     message = ""
