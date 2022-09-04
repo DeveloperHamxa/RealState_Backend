@@ -15,7 +15,7 @@ def search_property():
         message = "property found"
         status = "successful"
         code = 201
-        output = {'name': estate_found['name'],'image': estate_found['image']}
+        output = {'name': estate_found['name'],'image': estate_found['image'],'location': estate_found['location'], 'area': estate_found['area'], 'price': estate_found['price']}
         page_sanitized = json.loads(json_util.dumps(output))
         return jsonify({'result': page_sanitized, 'status': status, "message": message}), code
     else:
